@@ -1,0 +1,5 @@
+# pnpm 11 reads project settings from this file (settings moved out of .npmrc).
+# nodeLinker=hoisted: flat real directories, because junction links on this Windows
+# box are not realpath-resolvable by Node's ESM loader, which breaks vitest/vite.
+nodeLinker: hoisted
+autoInstallPeers: true

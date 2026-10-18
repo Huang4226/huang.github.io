@@ -1,0 +1,669 @@
+:root {
+  --bg: #15100b;
+  --bg-2: #1e1710;
+  --line: rgba(255, 226, 180, 0.14);
+  --text: #f3e7d3;
+  --muted: #a89478;
+  --gold: #e9b559;
+  --gold-dim: #b98f43;
+  --red: #d9534f;
+  --black-team: #8fa3bb;
+  --white-team: #f0e6cf;
+  --warn: #e0a03c;
+  --radius: 16px;
+  font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, -apple-system, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  background:
+    radial-gradient(1200px 700px at 50% -10%, #2c2115 0%, transparent 60%),
+    radial-gradient(900px 600px at 90% 110%, #241a11 0%, transparent 55%),
+    linear-gradient(180deg, var(--bg) 0%, #100c08 100%);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+#app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.boot {
+  margin: auto;
+  color: var(--muted);
+  letter-spacing: 0.2em;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+/* ============ 首页 ============ */
+
+.home {
+  margin: auto;
+  width: min(980px, 100%);
+  padding: 56px 24px 40px;
+}
+
+.home__head {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.home__kick {
+  margin: 0 0 10px;
+  font-size: 13px;
+  letter-spacing: 0.38em;
+  color: var(--gold-dim);
+  text-transform: uppercase;
+}
+
+.home__title {
+  margin: 0;
+  font-size: clamp(52px, 9vw, 88px);
+  line-height: 1.05;
+  letter-spacing: 0.16em;
+  text-indent: 0.16em;
+  background: linear-gradient(180deg, #ffe9b8 0%, #e9b559 55%, #a97c2f 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 6px 22px rgba(233, 181, 89, 0.22));
+}
+
+.home__sub {
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: 15px;
+  letter-spacing: 0.06em;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 26px 24px 22px;
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background:
+    linear-gradient(160deg, rgba(255, 226, 180, 0.07), rgba(255, 226, 180, 0.015)),
+    var(--bg-2);
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+  overflow: hidden;
+}
+
+.card::after {
+  content: "";
+  position: absolute;
+  inset: -40% 40% 60% -20%;
+  background: radial-gradient(closest-side, rgba(233, 181, 89, 0.16), transparent 70%);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(233, 181, 89, 0.45);
+  box-shadow: 0 18px 40px -18px rgba(0, 0, 0, 0.9);
+}
+
+.card:hover::after {
+  opacity: 1;
+}
+
+.card__badge {
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  color: #1a1208;
+  background: linear-gradient(180deg, #f3cd80, #d8a144);
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+.card__badge--warn {
+  background: linear-gradient(180deg, #6b5334, #4a3a23);
+  color: #f0d8a8;
+}
+
+.card__art {
+  align-self: center;
+  margin: 14px 0 10px;
+  color: var(--gold);
+  opacity: 0.95;
+}
+
+.mini {
+  width: 132px;
+  height: 142px;
+  display: block;
+}
+
+.card__name {
+  margin: 0;
+  font-size: 24px;
+  letter-spacing: 0.1em;
+}
+
+.card__desc {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 1.7;
+}
+
+.card__cta {
+  margin-top: 12px;
+  font-size: 13.5px;
+  color: var(--gold);
+  letter-spacing: 0.06em;
+}
+
+.home__foot {
+  margin-top: 34px;
+  text-align: center;
+  font-size: 12px;
+  color: rgba(168, 148, 120, 0.75);
+  letter-spacing: 0.08em;
+}
+
+/* ============ 对局页 ============ */
+
+.game {
+  margin: 0 auto;
+  width: min(760px, 100%);
+  padding: 18px 16px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+}
+
+.game__bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.select {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+}
+
+.select select {
+  font: inherit;
+  font-size: 13px;
+  color: var(--text);
+  background: rgba(255, 226, 180, 0.06);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 6px 10px;
+  cursor: pointer;
+  outline: none;
+}
+
+.select select:hover {
+  border-color: rgba(233, 181, 89, 0.4);
+}
+
+/* ============ 屏幕中央 toast（3 秒自动消失） ============ */
+
+.toast {
+  position: absolute;
+  left: 50%;
+  top: 48%;
+  transform: translate(-50%, -50%) scale(0.94);
+  padding: 13px 26px;
+  border-radius: 14px;
+  background: rgba(22, 15, 9, 0.93);
+  border: 1px solid rgba(233, 181, 89, 0.45);
+  color: #ffe9b8;
+  font-size: 17px;
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+  box-shadow: 0 22px 54px -22px #000, 0 0 0 1px rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s ease, transform 0.22s ease;
+  z-index: 4;
+}
+
+.toast--visible {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.game__acts {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+}
+
+.btn {
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: rgba(255, 226, 180, 0.05);
+  color: var(--text);
+  font-size: 13.5px;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.btn:hover {
+  background: rgba(255, 226, 180, 0.12);
+  border-color: rgba(233, 181, 89, 0.4);
+}
+
+.btn--ghost {
+  background: transparent;
+  color: var(--muted);
+}
+
+.turn {
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(255, 226, 180, 0.05);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.turn::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 10px currentColor;
+}
+
+.turn[data-team="red"]::before {
+  background: var(--red);
+}
+
+.turn[data-team="black"]::before {
+  background: var(--black-team);
+}
+
+.turn[data-team="white"]::before {
+  background: var(--white-team);
+}
+
+.game__stage {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 10px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(255, 226, 180, 0.05), rgba(0, 0, 0, 0.25));
+}
+
+.game__stage canvas {
+  display: block;
+  border-radius: 8px;
+  box-shadow: 0 22px 50px -24px rgba(0, 0, 0, 0.95);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.panel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 26px;
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 226, 180, 0.035);
+  font-size: 13px;
+}
+
+.panel__row {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.panel__row--warn {
+  color: var(--warn);
+  margin-left: auto;
+  font-size: 12.5px;
+}
+
+.btn--icon {
+  padding: 8px 10px;
+  line-height: 1;
+}
+
+.btn--off {
+  opacity: 0.45;
+}
+
+.panel__row--moves {
+  flex-basis: 100%;
+  align-items: flex-start;
+}
+
+.moves {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+}
+
+.mv {
+  font-size: 12.5px;
+  color: #dccbb0;
+  letter-spacing: 0.04em;
+}
+
+.mv i {
+  font-style: normal;
+  color: var(--gold-dim);
+  font-size: 10.5px;
+  margin-right: 4px;
+}
+
+.panel__label {
+  color: var(--muted);
+  letter-spacing: 0.1em;
+}
+
+.chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.chip {
+  min-width: 22px;
+  text-align: center;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 12px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.chip--red {
+  color: #ff8d84;
+  border-color: rgba(217, 83, 79, 0.5);
+}
+
+.chip--black {
+  color: #b9c9dd;
+  border-color: rgba(143, 163, 187, 0.5);
+}
+
+.chip--white {
+  color: #f6ecd4;
+  border-color: rgba(240, 230, 207, 0.45);
+}
+
+/* 三人局的三家状态 */
+
+.teams {
+  display: inline-flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.team {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.team i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.team b {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.team--active {
+  border-color: rgba(233, 181, 89, 0.55);
+  color: var(--gold);
+  background: rgba(233, 181, 89, 0.08);
+}
+
+.team--out {
+  opacity: 0.42;
+  text-decoration: line-through;
+}
+
+.team[data-team="red"] i {
+  background: var(--red);
+}
+
+.team[data-team="black"] i {
+  background: var(--black-team);
+}
+
+.team[data-team="white"] i {
+  background: var(--white-team);
+}
+
+.game--three {
+  width: min(920px, 100%);
+}
+
+/* ============ 终局遮罩 ============ */
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(8, 6, 4, 0.6);
+  backdrop-filter: blur(2px);
+  border-radius: 18px;
+  z-index: 5;
+  animation: fade-in 0.22s ease;
+}
+
+.overlay[hidden] {
+  display: none;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.overlay__card {
+  text-align: center;
+  padding: 26px 38px 24px;
+  border-radius: 16px;
+  border: 1px solid rgba(233, 181, 89, 0.32);
+  background: linear-gradient(165deg, #251b11, #150f09);
+  box-shadow: 0 34px 70px -34px #000;
+}
+
+.overlay__kick {
+  margin: 0 0 8px;
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  color: var(--gold-dim);
+}
+
+.overlay__title {
+  margin: 0;
+  font-size: 34px;
+  letter-spacing: 0.14em;
+  color: var(--gold);
+}
+
+.overlay__title[data-team="red"] {
+  color: #ff8d84;
+}
+
+.overlay__title[data-team="black"] {
+  color: #b9c9dd;
+}
+
+.overlay__desc {
+  margin: 10px 0 22px;
+  font-size: 13.5px;
+  color: var(--muted);
+}
+
+.overlay__acts {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.btn--primary {
+  background: linear-gradient(180deg, #f3cd80, #d8a144);
+  border-color: #d8a144;
+  color: #241408;
+  font-weight: 600;
+}
+
+.btn--primary:hover {
+  background: linear-gradient(180deg, #ffdc95, #e5ad4f);
+}
+
+/* ============ 三人规划页 ============ */
+
+.plan {
+  margin: auto;
+  width: min(820px, 100%);
+  padding: 40px 24px;
+}
+
+.plan__bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.pill {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+
+.pill--warn {
+  color: #f0d8a8;
+  border-color: rgba(224, 160, 60, 0.45);
+  background: rgba(224, 160, 60, 0.1);
+  margin-left: auto;
+}
+
+.plan__title {
+  margin: 0 0 14px;
+  font-size: 34px;
+  letter-spacing: 0.12em;
+  color: var(--gold);
+}
+
+.plan__lead {
+  margin: 0 0 26px;
+  color: #d8c8ae;
+  line-height: 1.9;
+  font-size: 14.5px;
+}
+
+.plan__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.plan__card {
+  padding: 18px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: rgba(255, 226, 180, 0.04);
+}
+
+.plan__card h3 {
+  margin: 0 0 8px;
+  font-size: 16px;
+  color: var(--gold);
+  letter-spacing: 0.08em;
+}
+
+.plan__card p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.85;
+  color: #cbb99c;
+}
+
+.plan__note {
+  margin-top: 26px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+@media (max-width: 760px) {
+  .cards,
+  .plan__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .home {
+    padding-top: 34px;
+  }
+
+  .panel__row--warn {
+    margin-left: 0;
+  }
+}
