@@ -66,8 +66,19 @@ export interface Topology {
   palace(team: Team): ReadonlySet<number>;
   /** 该点是否在 team 的本方半场（相/象不可过河的依据） */
   ownHalf(node: number, team: Team): boolean;
-  /** 兵/卒向前一步的落点（经典 1 个；三人局站在渡口时有 2 个"过河"方向） */
-  pawnForward(node: number, team: Team): number[];
+  /**
+   * 兵/卒向前一步：
+   * - 经典：按阵营方向前进 1 格（过河后同向，不回头）；
+   * - 三人局：未过河朝本翼渡口（rank+1）；已过河则深入所在翼（rank−1）。
+   * 渡口处返回空，过桥由 pawnCross 负责。
+   */
+  pawnForward(node: number, team: Team, crossed?: boolean): number[];
+  /** 兵/卒在渡口可走的过河桥（经典棋盘为空） */
+  pawnCross(node: number): number[];
+  /** 兵/卒向所在翼渡口退一步（仅三人局"掉头"用；经典棋盘为空） */
+  pawnRetreat(node: number): number[];
+  /** 该节点所属翼的"地主"队伍；经典棋盘返回 null */
+  hostTeam(node: number): Team | null;
   /** 兵/卒横向一步的两个落点（是否允许由调用方按"过河"判断） */
   pawnSide(node: number, team: Team): number[];
 }

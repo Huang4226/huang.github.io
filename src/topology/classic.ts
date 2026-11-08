@@ -220,6 +220,16 @@ export function createClassicTopology(): Topology {
       const rank = team === 'red' ? rankOf(node) + 1 : rankOf(node) - 1;
       return rank >= 0 && rank < ranks ? [classicId(file, rank)] : [];
     },
+    // 经典棋盘没有"续过河 / 掉头 / 地主"概念
+    pawnCross() {
+      return [];
+    },
+    pawnRetreat() {
+      return [];
+    },
+    hostTeam() {
+      return null;
+    },
     pawnSide(node) {
       const file = fileOf(node);
       const rank = rankOf(node);

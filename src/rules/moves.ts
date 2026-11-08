@@ -1,4 +1,4 @@
-import type { Piece } from '../core/types';
+import type { Piece, Team } from '../core/types';
 import type { Topology } from '../topology/types';
 
 /**
@@ -9,6 +9,7 @@ export function pseudoMovesFrom(
   cells: ReadonlyArray<Piece | null>,
   topo: Topology,
   from: number,
+  alive?: readonly Team[],
 ): number[] {
   const piece = cells[from];
   if (!piece) return [];
@@ -56,10 +57,13 @@ export function pseudoMovesFrom(
       break;
     }
     case 'horse': {
+      // 同一落点可能有多条路线（蹩腿点不同）：只要有一条腿没被堵就能走
+      const seen = new Set<number>();
       for (const jump of topo.jumps.get(from) ?? []) {
         if (jump.kind !== 'horse') continue;
-        // 过河桥上的"跳"没有蹩腿点
+        if (seen.has(jump.target)) continue;
         if (jump.leg !== undefined && cells[jump.leg]) continue;
+        seen.add(jump.target);
         push(jump.target);
       }
       break;
@@ -78,10 +82,10 @@ export function pseudoMovesFrom(
       for (const target of topo.palace(piece.team)) {
         if (target === from) continue;
         const b = topo.nodes[target]!;
-        const dx = Math.abs(b.x - a.x);
-        const dy = Math.abs(b.y - a.y);
-        // 九宫内斜走一格：两个方向各一格（不依赖固定格距，兼容三人局的翼）
-        if (Math.abs(dx - topo.gap) <= topo.gap * 0.2 && Math.abs(dy - topo.gap) <= topo.gap * 0.2) {
+        // 九宫内斜走一格：按方阵坐标判 (±1, ±1)，与图上的实际格距无关
+        if (a.file === undefined || a.rank === undefined) continue;
+        if (b.file === undefined || b.rank === undefined) continue;
+        if (Math.abs(b.file - a.file) === 1 && Math.abs(b.rank - a.rank) === 1) {
           push(target);
         }
       }
@@ -98,11 +102,23 @@ export function pseudoMovesFrom(
       break;
     }
     case 'pawn': {
-      for (const id of topo.pawnForward(from, piece.team)) push(id);
       const crossed = piece.crossed ?? !topo.ownHalf(from, piece.team);
+      // 未过河朝渡口、已过河深入所在翼（rank−1），到底线后无路
+      for (const id of topo.pawnForward(from, piece.team, crossed)) push(id);
+      // 河道边（渡口）：可继续过桥去第三翼；不回本方翼
+      for (const id of topo.pawnCross(from)) {
+        if (!topo.ownHalf(id, piece.team)) push(id);
+      }
+      // 掉头：仅"已过河 + 所在翼的将已死"时开放，向渡口退一步
+      if (crossed && alive) {
+        const host = topo.hostTeam(from);
+        if (host !== null && !alive.includes(host)) {
+          for (const id of topo.pawnRetreat(from)) push(id);
+        }
+      }
       if (crossed) {
         for (const id of topo.pawnSide(from, piece.team)) {
-          // 过河兵不能退回本方半场（三人局逐鹿台里可能相邻到自家渡口）
+          // 过河兵不能退回本方半场
           if (!topo.ownHalf(id, piece.team)) push(id);
         }
       }
@@ -118,6 +134,8 @@ export function pseudoMovesFrom(
 /**
  * 攻击格：伪合法走法 + 将帅照面（飞将）。
  * 飞将不是"可以走的招"，而是"这一列上对方老将正对着我"的攻击判定。
+ * 三人局的列线在渡口处接上对岸那条线（见 topology/three.ts 的射线构造），
+ * 所以这里的照面判定对"隔河对脸"天然成立，不需要额外分支。
  */
 export function attackTargets(
   cells: ReadonlyArray<Piece | null>,

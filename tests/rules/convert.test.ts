@@ -160,6 +160,7 @@ describe('M5 淘汰 · 轮转与终局（S-01 / S-05 / S-06 / S-07）', () => {
   });
 
   it('S-07 困毙 = 出局，残子原地清除、无人收编', () => {
+    // 三家老将都不在中线上，避免"隔河照面"把困毙变成将死（见 B-02）
     const state = makeBoard(
       [
         [threeWingAt(1, 4, 1), 'black', 'general'],
@@ -167,8 +168,8 @@ describe('M5 淘汰 · 轮转与终局（S-01 / S-05 / S-06 / S-07）', () => {
         [threeWingAt(1, 6, 1), 'red', 'horse'],
         [threeWingAt(1, 3, 2), 'red', 'chariot'],
         [threeWingAt(1, 5, 2), 'red', 'chariot'],
-        [threeWingAt(0, 4, 0), 'red', 'general'],
-        [threeWingAt(2, 4, 0), 'white', 'general'],
+        [threeWingAt(0, 3, 0), 'red', 'general'],
+        [threeWingAt(2, 3, 0), 'white', 'general'],
       ],
       'black',
     );

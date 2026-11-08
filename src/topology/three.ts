@@ -1,23 +1,20 @@
 import type { Piece, PieceKind, Team } from '../core/types';
+import { THREE_NODES } from './three-coords';
 import type { BoardNode, Frame, JumpMove, PieceInit, Ray, Topology } from './types';
 
+/**
+ * 三人局拓扑：三翼各 9×5 = 45 个交点，共 135 个，渡口（rank 4）点对点相连。
+ *
+ * 交点的像素坐标不是公式算出来的，而是从 `picture/三人地图.png` 的墨线里逐点标定的
+ * （见 three-coords.ts 与 docs/设计文档.md 7.2.1）。这里只用坐标画图和判命中；
+ * 走法、将军、飞将、吃子全部只看本文件建立的 rays / jumps / bridges。
+ */
 const FILES = 9;
 const RANKS = 5;
 
-/**
- * 每翼的仿射矩阵（最小二乘拟合自图上 96 个格子中心，见 scripts/fit-three.py）：
- *   x = a1*f + a2*r + c1
- *   y = b1*f + b2*r + c2
- */
-const AFFINE: ReadonlyArray<{ a1: number; a2: number; c1: number; b1: number; b2: number; c2: number }> = [
-  { a1: 72.8617, a2: 0.0197, c1: 255.89, b1: -0.0038, b2: -66.5486, c2: 874.54 },
-  { a1: 36.4436, a2: -53.8537, c1: 706.11, b1: 63.1179, b2: 31.0042, c2: 103.99 },
-  { a1: -37.2442, a2: 53.6639, c1: 317.37, b1: 62.6546, b2: 30.6386, c2: 105.26 },
-];
 const TEAM_WING: Record<Team, number> = { red: 0, black: 1, white: 2 };
 const WING_TEAM: Team[] = ['red', 'black', 'white'];
 const FRAME_OF_WING: Frame[] = ['s0', 's1', 's2'];
-
 
 export interface BuiltThree {
   topology: Topology;
@@ -33,11 +30,8 @@ export function createThreeTopology(): BuiltThree {
     const row: number[] = [];
     for (let r = 0; r < RANKS; r++) {
       for (let f = 0; f < FILES; f++) {
-        const m = AFFINE[s]!;
-        const x = m.a1 * f + m.a2 * r + m.c1;
-        const y = m.b1 * f + m.b2 * r + m.c2;
-
         const id = nodes.length;
+        const [x, y] = THREE_NODES[id]!;
         row.push(id);
         nodes.push({
           id,
@@ -99,7 +93,7 @@ export function createThreeTopology(): BuiltThree {
     }
   }
 
-  // —— 射线：翼内 4 向 + 过河 ——
+  // —— 射线：河道不切断线，列线走到渡口就顺着桥接上对岸那条列线 ——
   const rays = new Map<number, Ray[]>();
   const pushRay = (from: number, dir: number, targets: number[]): void => {
     if (!targets.length) return;
@@ -108,17 +102,19 @@ export function createThreeTopology(): BuiltThree {
     rays.set(from, list);
   };
 
+  /** 对岸那条列线：从对岸渡口点往下走到本方底线 */
+  const bankLine = (partner: number): number[] => {
+    const b = nodes[partner]!;
+    const line: number[] = [partner];
+    for (let rr = (b.rank ?? 0) - 1; rr >= 0; rr--) line.push(wingAt(b.wing!, b.file!, rr));
+    return line;
+  };
+
   for (let s = 0; s < 3; s++) {
     for (let r = 0; r < RANKS; r++) {
       for (let f = 0; f < FILES; f++) {
         const from = wingAt(s, f, r);
-        const dirs: Array<[number, number, number]> = [
-          [1, 0, 1],
-          [-1, 0, 2],
-          [0, 1, 3],
-          [0, -1, 4],
-        ];
-        for (const [df, dr, dir] of dirs) {
+        for (const [df, dr, dir] of [[1, 0, 1], [-1, 0, 2], [0, -1, 4]] as const) {
           const targets: number[] = [];
           for (let k = 1; ; k++) {
             const nf = f + df * k;
@@ -128,17 +124,21 @@ export function createThreeTopology(): BuiltThree {
           }
           pushRay(from, dir, targets);
         }
-      }
-    }
-  }
 
-  // 过河射线：跨到对岸后沿对岸的"向底线"方向继续
-  for (const [from, tos] of bridges) {
-    for (const to of tos) {
-      const b = nodes[to]!;
-      const line: number[] = [to];
-      for (let r = (b.rank ?? 0) - 1; r >= 0; r--) line.push(wingAt(b.wing!, b.file!, r));
-      pushRay(from, 10, line);
+        // 向渡口（rank+）：本列剩余的点 + 过桥后的对岸列线。
+        // 渡口顶点连着两条桥，所以从顶点出发会分叉成两条射线（车/炮各走一条）。
+        const up: number[] = [];
+        for (let k = r + 1; k < RANKS; k++) up.push(wingAt(s, f, k));
+        const bank = wingAt(s, f, RANKS - 1);
+        const partners = bridges.get(bank) ?? [];
+        if (!partners.length) {
+          pushRay(from, 3, up);
+          continue;
+        }
+        for (const partner of partners) {
+          pushRay(from, 3, [...up, ...bankLine(partner)]);
+        }
+      }
     }
   }
 
@@ -146,32 +146,17 @@ export function createThreeTopology(): BuiltThree {
   const jumps = new Map<number, JumpMove[]>();
   const pushJump = (from: number, jump: JumpMove): void => {
     const list = jumps.get(from) ?? [];
-    if (list.some((j) => j.target === jump.target)) return;
+    // 同一落点可能有多条路线（蹩腿点不同），要全部留下
+    if (list.some((j) => j.target === jump.target && j.leg === jump.leg)) return;
     list.push(jump);
     jumps.set(from, list);
   };
-  const HORSE: Array<[number, number, number, number]> = [
-    [1, 2, 0, 1],
-    [-1, 2, 0, 1],
-    [1, -2, 0, -1],
-    [-1, -2, 0, -1],
-    [2, 1, 1, 0],
-    [2, -1, 1, 0],
-    [-2, 1, -1, 0],
-    [-2, -1, -1, 0],
-  ];
+
+  // 相：翼内 2×2，塞象眼，不过河
   for (let s = 0; s < 3; s++) {
     for (let r = 0; r < RANKS; r++) {
       for (let f = 0; f < FILES; f++) {
         const from = wingAt(s, f, r);
-        for (const [df, dr, lf, lr] of HORSE) {
-          if (!inside(f + df, r + dr) || !inside(f + lf, r + lr)) continue;
-          pushJump(from, {
-            kind: 'horse',
-            target: wingAt(s, f + df, r + dr),
-            leg: wingAt(s, f + lf, r + lr),
-          });
-        }
         for (const [df, dr] of [[2, 2], [2, -2], [-2, 2], [-2, -2]] as const) {
           if (!inside(f + df, r + dr) || !inside(f + df / 2, r + dr / 2)) continue;
           pushJump(from, {
@@ -183,9 +168,72 @@ export function createThreeTopology(): BuiltThree {
       }
     }
   }
-  // 马也能过河（桥上没有蹩腿）
-  for (const [from, tos] of bridges) {
-    for (const to of tos) pushJump(from, { kind: 'horse', target: to });
+
+  // —— 马：按"直行两格 + 拐弯一格"在图上走，不套理想方格 ——
+  // 这样地形拉伸、渡口倒三角都自然成立：路线永远是"两段直行 + 一段拐弯"，
+  // 第一格的落点就是蹩马腿的位置；绕回出发点（倒三角转一圈）的路线直接丢弃。
+  const NB = new Map<number, number[]>();
+  for (const [from, list] of rays) {
+    for (const ray of list) {
+      const first = ray.nodes[0];
+      if (first === undefined) continue;
+      const l = NB.get(from) ?? [];
+      if (!l.includes(first)) l.push(first);
+      NB.set(from, l);
+    }
+  }
+  /** 在 b 处量 a→b 与 b→c 的夹角：0°=继续直行，90°=拐弯，180°=掉头 */
+  const angleAt = (a: number, b: number, c: number): number => {
+    const p = nodes[a]!;
+    const q = nodes[b]!;
+    const r = nodes[c]!;
+    const v1x = q.x - p.x;
+    const v1y = q.y - p.y;
+    const v2x = r.x - q.x;
+    const v2y = r.y - q.y;
+    const d = (v1x * v2x + v1y * v2y) / (Math.hypot(v1x, v1y) * Math.hypot(v2x, v2y) || 1);
+    return (Math.acos(Math.max(-1, Math.min(1, d))) * 180) / Math.PI;
+  };
+  const STRAIGHT = 60; // 行/列线在盘心折了约 50–57°，所以"直行"要放宽到 60°
+  const TURN_LO = 66;
+  const TURN_HI = 132;
+  const isBridge = (a: number, b: number): boolean => nodes[a]!.wing !== nodes[b]!.wing;
+  const cmpScore = (u: number[], v: number[]): number => {
+    for (let i = 0; i < u.length; i++) {
+      if (u[i]! !== v[i]!) return u[i]! - v[i]!;
+    }
+    return 0;
+  };
+  for (let x = 0; x < nodes.length; x++) {
+    // 一个落点只留一条路线：先看少过河，再看拐角是否最像 90°，最后看总弯度
+    const best = new Map<number, { leg: number; score: number[] }>();
+    for (const a of NB.get(x) ?? []) {
+      const br1 = isBridge(x, a) ? 1 : 0;
+      for (const a2 of NB.get(a) ?? []) {
+        if (a2 === x) continue; // 掉头回去，不算
+        const br2 = isBridge(a, a2) ? 1 : 0;
+        // 倒三角正好三条边：连跨两条桥就是"绕着三角转一圈"，直接不算
+        if (br1 && br2) continue;
+        const bend = angleAt(x, a, a2);
+        for (const b of NB.get(a2) ?? []) {
+          if (b === a) continue;
+          if (b === x) continue; // 转一圈回到原地 → 删掉
+          const br3 = isBridge(a2, b) ? 1 : 0;
+          if (br2 && br3) continue;
+          const t = angleAt(a, a2, b);
+          // 形 A：先直行两格，再拐一格；形 B：先拐一格，再直行两格
+          const straightThenTurn = bend <= STRAIGHT && t >= TURN_LO && t <= TURN_HI;
+          const turnThenStraight = bend >= TURN_LO && bend <= TURN_HI && t <= STRAIGHT;
+          // 形 C：两翼错开的地方两条线都只折了 30° 左右，视觉上仍是"拐了一下"
+          const doubleBend = bend >= 25 && bend <= 62 && t >= 25 && t <= 62;
+          if (!straightThenTurn && !turnThenStraight && !doubleBend) continue;
+          const score = [br1 + br2 + br3, Math.round(Math.abs(t - 90)), Math.round(bend)];
+          const prev = best.get(b);
+          if (!prev || cmpScore(score, prev.score) < 0) best.set(b, { leg: a, score });
+        }
+      }
+    }
+    for (const [target, { leg }] of best) pushJump(x, { kind: 'horse', target, leg });
   }
 
   // —— 九宫 ——
@@ -240,12 +288,35 @@ export function createThreeTopology(): BuiltThree {
       return nodes[node]!.wing === TEAM_WING[team];
     },
 
-    /** 兵向前：翼内 rank+1；站在河沿则过河（顶点处左右皆可） */
-    pawnForward(node, team) {
+    /**
+     * 兵前进：
+     * - 未过河（含被收编的兵）：朝本翼渡口 rank+1；
+     * - 已过河：深入所在翼 rank−1，到底线后无路可进；
+     * - 渡口（rank 4）不算"前进"，续过河走 pawnCross，掉头走 pawnRetreat。
+     */
+    pawnForward(node, _team, crossed) {
       const n = nodes[node]!;
-      if (n.wing !== TEAM_WING[team]) return [];
-      if ((n.rank ?? 0) < RANKS - 1) return [wingAt(n.wing!, n.file!, (n.rank ?? 0) + 1)];
+      const rank = n.rank ?? 0;
+      if (crossed) return rank > 0 ? [wingAt(n.wing!, n.file!, rank - 1)] : [];
+      return rank < RANKS - 1 ? [wingAt(n.wing!, n.file!, rank + 1)] : [];
+    },
+
+    /** 渡口过桥：每个河沿点都有桥，顶点处连两座 */
+    pawnCross(node) {
       return bridges.get(node) ?? [];
+    },
+
+    /** 掉头：沿该翼向渡口退一步（仅在"地主已灭"时才允许调用） */
+    pawnRetreat(node) {
+      const n = nodes[node]!;
+      const rank = n.rank ?? 0;
+      return rank < RANKS - 1 ? [wingAt(n.wing!, n.file!, rank + 1)] : [];
+    },
+
+    /** 该翼的"地主"队伍：红 0 / 黑 1 / 白 2 */
+    hostTeam(node) {
+      const wing = nodes[node]!.wing;
+      return wing === undefined ? null : (WING_TEAM[wing] ?? null);
     },
 
     pawnSide(node) {

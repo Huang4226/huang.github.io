@@ -282,6 +282,10 @@ export async function mountGame(
     if (canSelect(state, id)) {
       selected = selected === id ? null : id;
       hints = selected === null ? [] : hintsFor(state, topo, selected);
+      // 选中却一个落点都没有：说清楚是"被将军只能应将"还是"这子被牵制"
+      if (selected !== null && hints.length === 0) {
+        toast.show(isInCheck(state, topo) ? '被将军了，只能先应将' : '这子暂时走不动（被牵制或有子挡着）');
+      }
       refresh();
       return;
     }

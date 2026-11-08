@@ -65,8 +65,9 @@ export function legalTargets(
   const piece = cells[from];
   if (!piece) return [];
   const board = cells.slice() as (Piece | null)[];
+  const alive: Team[] = [piece.team, ...enemies];
   const legal: number[] = [];
-  for (const to of pseudoMovesFrom(board, topo, from)) {
+  for (const to of pseudoMovesFrom(board, topo, from, alive)) {
     const captured = board[to] ?? null;
     board[to] = piece;
     board[from] = null;

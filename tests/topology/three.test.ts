@@ -68,6 +68,33 @@ describe('三人拓扑（三人地图）', () => {
     }
   });
 
+  it('三个河道顶点聚成中心的小倒三角', () => {
+    const apexes = [0, 1, 2].map((s) => topo.nodes[threeWingAt(s, 4, 4)]!);
+    const cx = apexes.reduce((a, n) => a + n.x, 0) / 3;
+    const cy = apexes.reduce((a, n) => a + n.y, 0) / 3;
+    // 三角形中心 ≈ 棋盘中心（511, 511）
+    expect(Math.hypot(cx - 511, cy - 511)).toBeLessThan(30);
+    for (let i = 0; i < 3; i++) {
+      for (let j = i + 1; j < 3; j++) {
+        const d = Math.hypot(apexes[i]!.x - apexes[j]!.x, apexes[i]!.y - apexes[j]!.y);
+        expect(d).toBeGreaterThan(40);
+        expect(d).toBeLessThan(90);
+      }
+    }
+  });
+
+  it('马的跳法必须对称：能跳过去就能跳回来', () => {
+    const set = (id: number): Set<number> =>
+      new Set((topo.jumps.get(id) ?? []).filter((j) => j.kind === 'horse').map((j) => j.target));
+    const bad: string[] = [];
+    for (let a = 0; a < topo.nodes.length; a++) {
+      for (const b of set(a)) {
+        if (!set(b).has(a)) bad.push(`${a}->${b}`);
+      }
+    }
+    expect(bad).toEqual([]);
+  });
+
   it('所有交点落在底图范围内，且互不重合', () => {
     for (const n of topo.nodes) {
       expect(n.x).toBeGreaterThan(0);
@@ -83,6 +110,6 @@ describe('三人拓扑（三人地图）', () => {
         min = Math.min(min, Math.hypot(a.x - b.x, a.y - b.y));
       }
     }
-    expect(min).toBeGreaterThan(12);
+    expect(min).toBeGreaterThan(35);
   });
 });
